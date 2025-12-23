@@ -7,6 +7,11 @@ let players = {
   white: null,
   black: null
 };
+let myName = null;
+let myColor = null;
+let currentGameId = null;
+let syncing = false;
+
 const firebaseConfig = {
     apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
     authDomain: "chesspiece-fc91e.firebaseapp.com",
@@ -20,6 +25,25 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+db.ref('games').on('child_added', snapshot => {
+  const gameId = snapshot.key;
+  const game = snapshot.val();
+
+  if (game.white === myName || game.black === myName) {
+    currentGameId = gameId;
+
+    myColor = (game.white === myName) ? 'w' : 'b';
+
+    players.white = { name: game.white };
+    players.black = { name: game.black };
+
+    game.load(game.fen);
+    board.position(game.fen);
+
+    listenToGameUpdates();
+    startNewGame();
+  }
+});
 
 document.getElementById('joinQueue').addEventListener('click', () => {
   const name = document.getElementById('playerName').value.trim();
@@ -40,6 +64,22 @@ document.getElementById('joinQueue').addEventListener('click', () => {
 
   tryPairing();
 });
+function listenToGameUpdates() {
+  db.ref(`games/${currentGameId}`).on('value', snapshot => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    // Évite boucle infinie
+    syncing = true;
+
+    game.load(data.fen);
+    board.position(data.fen);
+
+    syncing = false;
+    updateStatus();
+  });
+}
+
 function tryPairing() {
   if (waitingQueue.length >= 2) {
     const p1 = waitingQueue.shift();
@@ -69,8 +109,7 @@ function updateQueueStatus() {
 }
 
 function startNewGame() {
-  game.reset();
-  board.position('start');
+  board.position(game.fen());
 
   document.getElementById('lobby').style.display = 'none';
 
@@ -78,31 +117,43 @@ function startNewGame() {
 }
 
 function onDragStart(source, piece) {
-  // Empêche de déplacer si la partie est finie
-  if (game.isGameOver) return false;
+  if (game.isGameOver()) return false;
 
   // Empêche de jouer les pièces adverses
   if (
-    (game.turn() === 'w' && piece.startsWith('b')) ||
-    (game.turn() === 'b' && piece.startsWith('w'))
+    (myColor === 'w' && piece.startsWith('b')) ||
+    (myColor === 'b' && piece.startsWith('w'))
   ) {
+    return false;
+  }
+
+  // Empêche de jouer hors tour
+  if (game.turn() !== myColor) {
     return false;
   }
 }
 
+
 function onDrop(source, target) {
-  // Essaie le coup
+  if (syncing) return;
+
   const move = game.move({
     from: source,
     to: target,
-    promotion: 'q' // promotion automatique en dame
+    promotion: 'q'
   });
 
-  // Coup illégal → retour
   if (move === null) return 'snapback';
+
+  // Envoie la position au serveur
+  db.ref(`games/${currentGameId}`).update({
+    fen: game.fen(),
+    turn: game.turn()
+  });
 
   updateStatus();
 }
+
 
 function updateStatus() {
   let status = '';
