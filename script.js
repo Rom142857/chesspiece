@@ -11,6 +11,7 @@ let myName = null;
 let myColor = null;
 let currentGameId = null;
 let syncing = false;
+let gameReady = false;
 
 const firebaseConfig = {
     apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
@@ -37,6 +38,8 @@ db.ref('games').on('child_added', snapshot => {
     players.white = { name: game.white };
     players.black = { name: game.black };
 
+    gameReady = true
+    
     game.load(game.fen);
     board.position(game.fen);
 
@@ -156,15 +159,22 @@ function onDrop(source, target) {
 
 
 function updateStatus() {
+  if (!gameReady) {
+    document.getElementById('status').textContent =
+      'En attente d’un adversaire…';
+    return;
+  }
+
   let status = '';
 
-  if (game.isCheckmate) {
-    const winner = game.turn() === 'w'
-      ? players.black.name
-      : players.white.name;
+  if (game.isCheckmate()) {
+    const winner =
+      game.turn() === 'w'
+        ? players.black.name
+        : players.white.name;
 
     status = `Échec et mat ! Victoire de ${winner}`;
-  } else if (game.isDraw) {
+  } else if (game.isDraw()) {
     status = 'Partie nulle';
   } else {
     const currentPlayer =
@@ -177,6 +187,7 @@ function updateStatus() {
 
   document.getElementById('status').textContent = status;
 }
+
 
 
 const config = {
