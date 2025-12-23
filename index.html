@@ -13,15 +13,18 @@
 
 <body>
   <h1>♟️ Jeu d’échecs</h1>
-  <div id="players">
-  <h2>Joueurs</h2>
+ <div id="lobby">
+  <h2>Entrer dans la file d’attente</h2>
 
-  <input id="playerWhite" placeholder="Joueur Blancs">
-  <input id="playerBlack" placeholder="Joueur Noirs">
-
+  <input id="playerName" placeholder="Ton pseudo">
   <br><br>
-  <button id="startGame">Démarrer la partie</button>
+  <button id="joinQueue">Jouer</button>
+
+  <p id="queueStatus"></p>
 </div>
+
+<hr>
+
 
 <hr>
   <div id="board" style="width: 400px"></div>
