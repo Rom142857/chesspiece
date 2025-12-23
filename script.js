@@ -1,203 +1,20 @@
-window.onload = function() {
-// Création de la partie
-let game; // objet Chess()
+// ==================== VARIABLES GLOBALES ====================
+let game = new Chess();
 let board;
 let players = { white: null, black: null };
-let myColor; // 'w' ou 'b'
+let myColor;
 let currentGameId;
 let gameReady = false;
-let myName;
-const firebaseConfig = {
-    apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
-    authDomain: "chesspiece-fc91e.firebaseapp.com",
-    databaseURL: "https://chesspiece-fc91e-default-rtdb.firebaseio.com",
-    projectId: "chesspiece-fc91e",
-    storageBucket: "chesspiece-fc91e.firebasestorage.app",
-    messagingSenderId: "150549414858",
-    appId: "1:150549414858:web:0e200e0d48d5c9c0f3c533"
-  };
+let myName = prompt("Entrez votre pseudo :");
 
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-db.ref(`games/${currentGameId}`).on('value', snapshot => {
-  const gameData = snapshot.val();
-  if (!gameData) return;
-
-  gameReady = true;
-
-  // ⚠️ Toujours utiliser la variable globale Chess()
-  game.load(gameData.fen || 'start');
-  board.position(game.fen());
-
-  updateStatus();
-});
-// Pour mettre à jour immédiatement après chaque capture
-db.ref(`players/${players.white.name}/pieces`).on('value', snapshot => {
-  const pieces = snapshot.val();
-  if (pieces) displayPieceElo('white', pieces);
+// ==================== INITIALISATION ÉCHIQUIER ====================
+board = Chessboard('board', {
+  draggable: true,
+  position: 'start',
+  onDrop: onDrop
 });
 
-db.ref(`players/${players.black.name}/pieces`).on('value', snapshot => {
-  const pieces = snapshot.val();
-  if (pieces) displayPieceElo('black', pieces);
-});
-
-function clearCurrentGame(playerName) {
-  // Cherche les parties où le joueur est blanc ou noir
-  const gamesRef = db.ref('games');
-
-  gamesRef.once('value').then(snapshot => {
-    snapshot.forEach(childSnap => {
-      const game = childSnap.val();
-      const gameId = childSnap.key;
-
-      // Si le joueur est impliqué dans cette partie
-      if (game.white === playerName || game.black === playerName) {
-        // Supprime la partie
-        db.ref(`games/${gameId}`).remove()
-          .then(() => {
-            console.log(`Partie ${gameId} supprimée pour ${playerName}`);
-          })
-          .catch(err => console.error("Erreur lors de la suppression de la partie :", err));
-      }
-    });
-  }).catch(err => console.error("Erreur lors de la lecture des parties :", err));
-}
-
-
-// Exemple : lorsqu’un joueur clique sur “Rejoindre la queue”
-function joinQueue() {
-  clearCurrentGame(myName); // Supprime les parties existantes
-
-  // Puis continue avec l'appairage
-  const queueRef = db.ref('queue');
-  queueRef.push({ name: myName });
-}
-
-document.getElementById('joinQueue').addEventListener('click', () => {
-  const name = document.getElementById('playerName').value.trim();
-
-  if (!name) {
-    alert('Entre un pseudo');
-    return;
-  }
-
-  joinQueue(name);
-  updateQueueStatus();
-
-  tryPairing();
-});
-
-function attemptMatchmaking() {
-  const queueRef = db.ref('queue');
-
-  queueRef.transaction(queue => {
-    if (!queue) return queue;
-
-    const ids = Object.keys(queue);
-
-    // On enlève notre propre uid des candidats
-    const otherIds = ids.filter(id => id !== myUid);
-
-    if (otherIds.length < 1) return queue;
-
-    const opponentId = otherIds[0];
-    const opponent = queue[opponentId];
-    const me = queue[myUid];
-
-    if (!me || !opponent) return queue;
-
-    const gameId = db.ref('games').push().key;
-
-    const whiteIsMe = Math.random() < 0.5;
-
-    db.ref(`games/${gameId}`).set({
-      white: whiteIsMe ? me.name : opponent.name,
-      black: whiteIsMe ? opponent.name : me.name,
-      fen: 'start'
-    });
-
-    // On retire LES DEUX joueurs
-    delete queue[myUid];
-    delete queue[opponentId];
-
-    return queue;
-  });
-}
-
-
-  
-function listenToGameUpdates() {
-  db.ref(`games/${currentGameId}`).on('value', snapshot => {
-    const data = snapshot.val();
-    if (!data) return;
-
-    // Évite boucle infinie
-    syncing = true;
-
-    game.load(data.fen);
-    board.position(data.fen);
-
-    syncing = false;
-    updateStatus();
-  });
-}
-
-function tryPairing() {
-  if (waitingQueue.length >= 2) {
-    const p1 = waitingQueue.shift();
-    const p2 = waitingQueue.shift();
-
-    // Attribution aléatoire des couleurs
-    if (Math.random() < 0.5) {
-      players.white = { name: p1 };
-      players.black = { name: p2 };
-    } else {
-      players.white = { name: p2 };
-      players.black = { name: p1 };
-    }
-
-    startNewGame();
-  }
-}
-function updateQueueStatus() {
-  const status = document.getElementById('queueStatus');
-
-  if (waitingQueue.length === 0) {
-    status.textContent = 'Aucun joueur en attente';
-  } else {
-    status.textContent =
-      `En attente : ${waitingQueue.join(', ')}`;
-  }
-}
-
-function startNewGame() {
-  board.position(game.fen());
-
-  document.getElementById('lobby').style.display = 'none';
-
-  updateStatus();
-}
-
-function onDragStart(source, piece) {
-  if (game.isGameOver) return false;
-
-  // Empêche de jouer les pièces adverses
-  if (
-    (myColor === 'w' && piece.startsWith('b')) ||
-    (myColor === 'b' && piece.startsWith('w'))
-  ) {
-    return false;
-  }
-
-  // Empêche de jouer hors tour
-  if (game.turn() !== myColor) {
-    return false;
-  }
-}
-
-
+// ==================== FONCTION ONDROP ====================
 function onDrop(source, target) {
   if (!gameReady) return;
   if (game.turn() !== myColor) return 'snapback';
@@ -205,113 +22,33 @@ function onDrop(source, target) {
   const move = game.move({ from: source, to: target, promotion: 'q' });
   if (!move) return 'snapback';
 
-  // Mise à jour de la FEN dans Firebase
+  // Mise à jour Firebase
   db.ref(`games/${currentGameId}`).update({
     fen: game.fen(),
     turn: game.turn()
   });
 
-  // Si capture, mettre à jour le classement par pièce
+  // Capture : mise à jour Elo pièce par pièce
   if (move.captured) {
     const capturingPlayer = (myColor === 'w') ? players.white.name : players.black.name;
     const capturedPlayer  = (myColor === 'w') ? players.black.name : players.white.name;
 
-    // move.captured contient le type de pièce capturée : 'p', 'n', 'b', 'r', 'q', 'k'
     handleCapture(capturingPlayer, capturedPlayer, move.captured);
   }
 
   updateStatus();
 
-  // Si partie terminée, on peut aussi appeler endGame() pour mises à jour supplémentaires
-  if (game.isGameOver()) {
+  if (game.isGameOver) {
     endGame();
   }
 }
 
-
-
+// ==================== MISE À JOUR DU STATUS ====================
 function updateStatus() {
-  if (!gameReady) {
-    document.getElementById('status').textContent =
-      'En attente d’un adversaire…';
-    return;
-  }
-
-  let status = '';
-
-  if (game.isCheckmate) {
-    const winner =
-      game.turn() === 'w'
-        ? players.black.name
-        : players.white.name;
-
-    status = `Échec et mat ! Victoire de ${winner}`;
-  } else if (game.isDraw) {
-    status = 'Partie nulle';
-  } else {
-    const currentPlayer =
-      game.turn() === 'w'
-        ? players.white.name
-        : players.black.name;
-
-    status = `Au tour de ${currentPlayer}`;
-  }
-
-  document.getElementById('status').textContent = status;
+  board.position(game.fen());
 }
 
-function updatePieceElo(winnerPieces, loserPieces) {
-  const newWinnerPieces = {};
-  const newLoserPieces  = {};
-
-  for (const piece in winnerPieces) {
-    const winnerElo = winnerPieces[piece];
-    const loserElo  = loserPieces[piece];
-
-    const gain = loserElo * 0.01;
-
-    newWinnerPieces[piece] = winnerElo + gain;
-    newLoserPieces[piece]  = loserElo - gain;
-  }
-
-  return { newWinnerPieces, newLoserPieces };
-}
-
-function endGame() {
-  if (!game.isGameOver()) return;
-
-  let winnerName, loserName;
-  let isDraw = false;
-
-  if (game.isCheckmate()) {
-    winnerName = (game.turn() === 'w') ? players.black.name : players.white.name;
-    loserName  = (game.turn() === 'w') ? players.white.name : players.black.name;
-  } else if (game.isDraw()) {
-    isDraw = true;
-    winnerName = players.white.name; // on traite white et black de manière égale
-    loserName  = players.black.name;
-  } else {
-    return;
-  }
-
-  const winnerRef = db.ref(`players/${winnerName}/pieces`);
-  const loserRef  = db.ref(`players/${loserName}/pieces`);
-
-  Promise.all([winnerRef.get(), loserRef.get()]).then(([wSnap, lSnap]) => {
-    const winnerPieces = wSnap.val();
-    const loserPieces  = lSnap.val();
-
-    const { newWinnerPieces, newLoserPieces } = updatePieceElo(winnerPieces, loserPieces, isDraw);
-
-    winnerRef.set(newWinnerPieces);
-    loserRef.set(newLoserPieces);
-
-    console.log("Classements Elo par pièce mis à jour à la fin de la partie !");
-  }).catch(err => {
-    console.error("Erreur mise à jour Elo fin de partie :", err);
-  });
-}
-
+// ==================== FONCTIONS ELO ====================
 function updatePieceEloCapture(winnerPieces, loserPieces, piece) {
   const winnerElo = winnerPieces[piece];
   const loserElo  = loserPieces[piece];
@@ -332,10 +69,8 @@ function handleCapture(capturingPlayer, capturedPlayer, capturedPiece) {
     let winnerPieces = wSnap.val();
     let loserPieces  = lSnap.val();
 
-    // Met à jour le classement pour la pièce capturée
     ({ winnerPieces, loserPieces } = updatePieceEloCapture(winnerPieces, loserPieces, capturedPiece));
 
-    // Mettre à jour Firebase
     winnerRef.set(winnerPieces);
     loserRef.set(loserPieces);
 
@@ -345,23 +80,126 @@ function handleCapture(capturingPlayer, capturedPlayer, capturedPiece) {
   });
 }
 
+function endGame() {
+  if (!game.isGameOver) return;
+
+  let winnerName, loserName;
+  let isDraw = false;
+
+  if (game.isCheckmate) {
+    winnerName = (game.turn() === 'w') ? players.black.name : players.white.name;
+    loserName  = (game.turn() === 'w') ? players.white.name : players.black.name;
+  } else if (game.isDraw) {
+    isDraw = true;
+    winnerName = players.white.name;
+    loserName  = players.black.name;
+  } else return;
+
+  const winnerRef = db.ref(`players/${winnerName}/pieces`);
+  const loserRef  = db.ref(`players/${loserName}/pieces`);
+
+  Promise.all([winnerRef.get(), loserRef.get()]).then(([wSnap, lSnap]) => {
+    const winnerPieces = wSnap.val();
+    const loserPieces  = lSnap.val();
+
+    const { newWinnerPieces, newLoserPieces } = updatePieceEloCaptureForEnd(winnerPieces, loserPieces, isDraw);
+
+    winnerRef.set(newWinnerPieces);
+    loserRef.set(newLoserPieces);
+
+    console.log("Classements Elo mis à jour à la fin de la partie !");
+  });
+}
+
+function updatePieceEloCaptureForEnd(winnerPieces, loserPieces, isDraw) {
+  const newWinnerPieces = {};
+  const newLoserPieces = {};
+
+  for (const piece in winnerPieces) {
+    const winnerElo = winnerPieces[piece];
+    const loserElo  = loserPieces[piece];
+
+    if (isDraw) {
+      newWinnerPieces[piece] = winnerElo * 0.995 + loserElo * 0.005;
+      newLoserPieces[piece]  = loserElo  * 0.995 + winnerElo * 0.005;
+    } else {
+      const gain = loserElo * 0.01;
+      newWinnerPieces[piece] = winnerElo + gain;
+      newLoserPieces[piece]  = loserElo - gain;
+    }
+  }
+
+  return { newWinnerPieces, newLoserPieces };
+}
+
+// ==================== AFFICHAGE EN DIRECT ====================
 function displayPieceElo(playerColor, pieces) {
   for (const piece in pieces) {
     const id = `${playerColor}-${piece}`;
     const el = document.getElementById(id);
-    if (el) {
-      el.textContent = Math.round(pieces[piece]);
-    }
+    if (el) el.textContent = Math.round(pieces[piece]);
   }
 }
 
-const config = {
-  draggable: true,
-  position: 'start',
-  onDragStart: onDragStart,
-  onDrop: onDrop
-};
+// Synchronisation Firebase
+function listenEloUpdates() {
+  if (!players.white || !players.black) return;
 
-board = Chessboard('board', config);
-updateStatus();
-};
+  db.ref(`players/${players.white.name}/pieces`).on('value', snapshot => {
+    const pieces = snapshot.val();
+    if (pieces) displayPieceElo('white', pieces);
+  });
+
+  db.ref(`players/${players.black.name}/pieces`).on('value', snapshot => {
+    const pieces = snapshot.val();
+    if (pieces) displayPieceElo('black', pieces);
+  });
+}
+
+// ==================== GESTION FILE D'ATTENTE ====================
+function clearCurrentGame(playerName) {
+  const gamesRef = db.ref('games');
+
+  gamesRef.once('value').then(snapshot => {
+    snapshot.forEach(childSnap => {
+      const game = childSnap.val();
+      const gameId = childSnap.key;
+
+      if (game.white === playerName || game.black === playerName) {
+        db.ref(`games/${gameId}`).remove()
+          .then(() => console.log(`Partie ${gameId} supprimée pour ${playerName}`))
+          .catch(err => console.error("Erreur suppression partie :", err));
+      }
+    });
+  });
+}
+
+function joinQueue() {
+  clearCurrentGame(myName); // supprime parties existantes
+
+  const queueRef = db.ref('queue');
+  queueRef.push({ name: myName });
+
+  // Écoute de l'appairage
+  queueRef.on('child_added', snapshot => {
+    const opponentName = snapshot.val().name;
+    if (opponentName !== myName) {
+      // Crée la partie
+      const gameRef = db.ref('games').push({
+        white: myName,
+        black: opponentName,
+        fen: 'start',
+        turn: 'w'
+      });
+
+      currentGameId = gameRef.key;
+      players.white = { name: myName };
+      players.black = { name: opponentName };
+      myColor = 'w';
+
+      gameReady = true;
+      listenEloUpdates();
+      console.log(`Partie commencée contre ${opponentName}`);
+    }
+  });
+}
