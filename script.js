@@ -33,7 +33,7 @@ function onDrop(source, target) {
 function updateStatus() {
   let status = '';
 
-  if (game.isCheckmate()) {
+  if (game.isCheckmate) {
     status = 'Échec et mat !';
   } else if (game.isDraw()) {
     status = 'Partie nulle';
