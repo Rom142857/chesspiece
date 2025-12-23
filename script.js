@@ -83,12 +83,6 @@ document.getElementById('joinQueue').addEventListener('click', () => {
     return;
   }
 
-  // Empêche doublons
-  if (waitingQueue.includes(name)) {
-    alert('Tu es déjà dans la file');
-    return;
-  }
-
   joinQueue(name);
   updateQueueStatus();
 
