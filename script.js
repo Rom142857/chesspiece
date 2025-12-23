@@ -43,18 +43,38 @@ db.ref(`players/${players.black.name}/pieces`).on('value', snapshot => {
   if (pieces) displayPieceElo('black', pieces);
 });
 
+function clearCurrentGame(playerName) {
+  // Cherche les parties où le joueur est blanc ou noir
+  const gamesRef = db.ref('games');
 
-function joinQueue(name) {
-  myName = name;
+  gamesRef.once('value').then(snapshot => {
+    snapshot.forEach(childSnap => {
+      const game = childSnap.val();
+      const gameId = childSnap.key;
 
-  const ref = db.ref(`queue/${myUid}`);
-  ref.set({
-    name: myName,
-    joinedAt: Date.now()
-  });
-
-  attemptMatchmaking();
+      // Si le joueur est impliqué dans cette partie
+      if (game.white === playerName || game.black === playerName) {
+        // Supprime la partie
+        db.ref(`games/${gameId}`).remove()
+          .then(() => {
+            console.log(`Partie ${gameId} supprimée pour ${playerName}`);
+          })
+          .catch(err => console.error("Erreur lors de la suppression de la partie :", err));
+      }
+    });
+  }).catch(err => console.error("Erreur lors de la lecture des parties :", err));
 }
+
+
+// Exemple : lorsqu’un joueur clique sur “Rejoindre la queue”
+function joinQueue() {
+  clearCurrentGame(myName); // Supprime les parties existantes
+
+  // Puis continue avec l'appairage
+  const queueRef = db.ref('queue');
+  queueRef.push({ name: myName });
+}
+
 document.getElementById('joinQueue').addEventListener('click', () => {
   const name = document.getElementById('playerName').value.trim();
 
