@@ -17,7 +17,32 @@
   <h2>Entrer dans la file d’attente</h2>
 
   <input id="playerName" placeholder="Ton pseudo">
-  <br><br>
+  <br>
+  <div id="white-elo">
+  <h3>Blancs</h3>
+  <ul>
+    <li>Pions: <span id="white-pawn">1200</span></li>
+    <li>Cavaliers: <span id="white-knight">1300</span></li>
+    <li>Fous: <span id="white-bishop">1250</span></li>
+    <li>Tours: <span id="white-rook">1400</span></li>
+    <li>Dame: <span id="white-queen">1500</span></li>
+    <li>Roi: <span id="white-king">1600</span></li>
+  </ul>
+</div>
+
+<div id="black-elo">
+  <h3>Noirs</h3>
+  <ul>
+    <li>Pions: <span id="black-pawn">1100</span></li>
+    <li>Cavaliers: <span id="black-knight">1350</span></li>
+    <li>Fous: <span id="black-bishop">1200</span></li>
+    <li>Tours: <span id="black-rook">1380</span></li>
+    <li>Dame: <span id="black-queen">1450</span></li>
+    <li>Roi: <span id="black-king">1580</span></li>
+  </ul>
+</div>
+
+  <br>
   <button id="joinQueue">Jouer</button>
 
   <p id="queueStatus"></p>
