@@ -12,48 +12,33 @@
 </head>
 
 <body>
-  <h1>♟️ Jeu d’échecs</h1>
- <div id="lobby">
-  <h2>Entrer dans la file d’attente</h2>
+  <div id="board" style="width: 400px"></div>
 
-  <input id="playerName" placeholder="Ton pseudo">
-  <br>
-  <div id="white-elo">
+<div id="white-elo">
   <h3>Blancs</h3>
   <ul>
     <li>Pions: <span id="white-pawn">1200</span></li>
-    <li>Cavaliers: <span id="white-knight">1300</span></li>
-    <li>Fous: <span id="white-bishop">1250</span></li>
-    <li>Tours: <span id="white-rook">1400</span></li>
-    <li>Dame: <span id="white-queen">1500</span></li>
-    <li>Roi: <span id="white-king">1600</span></li>
+    <li>Cavaliers: <span id="white-knight">1200</span></li>
+    <li>Fous: <span id="white-bishop">1200</span></li>
+    <li>Tours: <span id="white-rook">1200</span></li>
+    <li>Dame: <span id="white-queen">1200</span></li>
+    <li>Roi: <span id="white-king">1200</span></li>
   </ul>
 </div>
 
 <div id="black-elo">
   <h3>Noirs</h3>
   <ul>
-    <li>Pions: <span id="black-pawn">1100</span></li>
-    <li>Cavaliers: <span id="black-knight">1350</span></li>
+    <li>Pions: <span id="black-pawn">1200</span></li>
+    <li>Cavaliers: <span id="black-knight">1200</span></li>
     <li>Fous: <span id="black-bishop">1200</span></li>
-    <li>Tours: <span id="black-rook">1380</span></li>
-    <li>Dame: <span id="black-queen">1450</span></li>
-    <li>Roi: <span id="black-king">1580</span></li>
+    <li>Tours: <span id="black-rook">1200</span></li>
+    <li>Dame: <span id="black-queen">1200</span></li>
+    <li>Roi: <span id="black-king">1200</span></li>
   </ul>
 </div>
 
-  <br>
-  <button id="joinQueue">Jouer</button>
-
-  <p id="queueStatus"></p>
-</div>
-
-<hr>
-
-
-<hr>
-  <div id="board" style="width: 400px"></div>
-  <p id="status"></p>
+<button onclick="joinQueue()">Rejoindre la queue</button>
 
   <!-- Librairies -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
