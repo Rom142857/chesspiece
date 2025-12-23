@@ -26,27 +26,19 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-db.ref('games').on('child_added', snapshot => {
-  const gameData = snapshot.val(); // <-- JSON de Firebase, pas le Chess()
-  const gameId = snapshot.key;
+db.ref(`games/${currentGameId}`).on('value', snapshot => {
+  const gameData = snapshot.val();
+  if (!gameData) return;
 
-  if (gameData.white === myName || gameData.black === myName) {
-    currentGameId = gameId;
-    myColor = (gameData.white === myName) ? 'w' : 'b';
+  gameReady = true;
 
-    players.white = { name: gameData.white };
-    players.black = { name: gameData.black };
+  // ⚠️ Toujours utiliser la variable globale Chess()
+  game.load(gameData.fen || 'start');
+  board.position(game.fen());
 
-    gameReady = true;
-
-    // ⚠️ Utiliser la variable globale `game` pour les méthodes
-    game.load(gameData.fen || 'start');
-    board.position(game.fen());
-
-    listenToGameUpdates();
-    updateStatus();
-  }
+  updateStatus();
 });
+
 
 function joinQueue(name) {
   myName = name;
@@ -189,17 +181,13 @@ function onDragStart(source, piece) {
 
 
 function onDrop(source, target) {
-  if (syncing) return;
+  if (!gameReady) return;
+  if (game.turn() !== myColor) return 'snapback';
 
-  const move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q'
-  });
+  const move = game.move({ from: source, to: target, promotion: 'q' });
+  if (!move) return 'snapback';
 
-  if (move === null) return 'snapback';
-
-  // Envoie la position au serveur
+  // Mise à jour Firebase
   db.ref(`games/${currentGameId}`).update({
     fen: game.fen(),
     turn: game.turn()
