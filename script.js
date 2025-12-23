@@ -1,18 +1,12 @@
 window.onload = function() {
 // Création de la partie
-const game = new Chess();
-let board = null;
-let waitingQueue = [];
-let players = {
-  white: null,
-  black: null
-};
-let myName = null;
-let myColor = null;
-let currentGameId = null;
-let syncing = false;
+let game; // objet Chess()
+let board;
+let players = { white: null, black: null };
+let myColor; // 'w' ou 'b'
+let currentGameId;
 let gameReady = false;
-const myUid = crypto.randomUUID();
+let myName;
 const firebaseConfig = {
     apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
     authDomain: "chesspiece-fc91e.firebaseapp.com",
@@ -187,14 +181,29 @@ function onDrop(source, target) {
   const move = game.move({ from: source, to: target, promotion: 'q' });
   if (!move) return 'snapback';
 
-  // Mise à jour Firebase
+  // Mise à jour de la FEN dans Firebase
   db.ref(`games/${currentGameId}`).update({
     fen: game.fen(),
     turn: game.turn()
   });
 
+  // Si capture, mettre à jour le classement par pièce
+  if (move.captured) {
+    const capturingPlayer = (myColor === 'w') ? players.white.name : players.black.name;
+    const capturedPlayer  = (myColor === 'w') ? players.black.name : players.white.name;
+
+    // move.captured contient le type de pièce capturée : 'p', 'n', 'b', 'r', 'q', 'k'
+    handleCapture(capturingPlayer, capturedPlayer, move.captured);
+  }
+
   updateStatus();
+
+  // Si partie terminée, on peut aussi appeler endGame() pour mises à jour supplémentaires
+  if (game.isGameOver()) {
+    endGame();
+  }
 }
+
 
 
 function updateStatus() {
@@ -227,7 +236,90 @@ function updateStatus() {
   document.getElementById('status').textContent = status;
 }
 
+function updatePieceElo(winnerPieces, loserPieces) {
+  const newWinnerPieces = {};
+  const newLoserPieces  = {};
 
+  for (const piece in winnerPieces) {
+    const winnerElo = winnerPieces[piece];
+    const loserElo  = loserPieces[piece];
+
+    const gain = loserElo * 0.01;
+
+    newWinnerPieces[piece] = winnerElo + gain;
+    newLoserPieces[piece]  = loserElo - gain;
+  }
+
+  return { newWinnerPieces, newLoserPieces };
+}
+
+function endGame() {
+  if (!game.isGameOver()) return;
+
+  let winnerName, loserName;
+  let isDraw = false;
+
+  if (game.isCheckmate()) {
+    winnerName = (game.turn() === 'w') ? players.black.name : players.white.name;
+    loserName  = (game.turn() === 'w') ? players.white.name : players.black.name;
+  } else if (game.isDraw()) {
+    isDraw = true;
+    winnerName = players.white.name; // on traite white et black de manière égale
+    loserName  = players.black.name;
+  } else {
+    return;
+  }
+
+  const winnerRef = db.ref(`players/${winnerName}/pieces`);
+  const loserRef  = db.ref(`players/${loserName}/pieces`);
+
+  Promise.all([winnerRef.get(), loserRef.get()]).then(([wSnap, lSnap]) => {
+    const winnerPieces = wSnap.val();
+    const loserPieces  = lSnap.val();
+
+    const { newWinnerPieces, newLoserPieces } = updatePieceElo(winnerPieces, loserPieces, isDraw);
+
+    winnerRef.set(newWinnerPieces);
+    loserRef.set(newLoserPieces);
+
+    console.log("Classements Elo par pièce mis à jour à la fin de la partie !");
+  }).catch(err => {
+    console.error("Erreur mise à jour Elo fin de partie :", err);
+  });
+}
+
+function updatePieceEloCapture(winnerPieces, loserPieces, piece) {
+  const winnerElo = winnerPieces[piece];
+  const loserElo  = loserPieces[piece];
+
+  const gain = loserElo * 0.01;
+
+  winnerPieces[piece] = winnerElo + gain;
+  loserPieces[piece]  = loserElo - gain;
+
+  return { winnerPieces, loserPieces };
+}
+
+function handleCapture(capturingPlayer, capturedPlayer, capturedPiece) {
+  const winnerRef = db.ref(`players/${capturingPlayer}/pieces`);
+  const loserRef  = db.ref(`players/${capturedPlayer}/pieces`);
+
+  Promise.all([winnerRef.get(), loserRef.get()]).then(([wSnap, lSnap]) => {
+    let winnerPieces = wSnap.val();
+    let loserPieces  = lSnap.val();
+
+    // Met à jour le classement pour la pièce capturée
+    ({ winnerPieces, loserPieces } = updatePieceEloCapture(winnerPieces, loserPieces, capturedPiece));
+
+    // Mettre à jour Firebase
+    winnerRef.set(winnerPieces);
+    loserRef.set(loserPieces);
+
+    console.log(`Classements mis à jour après la capture de ${capturedPiece} !`);
+  }).catch(err => {
+    console.error("Erreur mise à jour Elo capture :", err);
+  });
+}
 
 const config = {
   draggable: true,
