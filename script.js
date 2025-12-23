@@ -27,24 +27,24 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 db.ref('games').on('child_added', snapshot => {
+  const gameData = snapshot.val(); // <-- JSON de Firebase, pas le Chess()
   const gameId = snapshot.key;
-  const game = snapshot.val();
 
-  if (game.white === myName || game.black === myName) {
+  if (gameData.white === myName || gameData.black === myName) {
     currentGameId = gameId;
+    myColor = (gameData.white === myName) ? 'w' : 'b';
 
-    myColor = (game.white === myName) ? 'w' : 'b';
+    players.white = { name: gameData.white };
+    players.black = { name: gameData.black };
 
-    players.white = { name: game.white };
-    players.black = { name: game.black };
+    gameReady = true;
 
-    gameReady = true
-    
-    game.load(game.fen);
-    board.position(game.fen);
+    // ⚠️ Utiliser la variable globale `game` pour les méthodes
+    game.load(gameData.fen || 'start');
+    board.position(game.fen());
 
     listenToGameUpdates();
-    startNewGame();
+    updateStatus();
   }
 });
 
