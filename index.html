@@ -2,10 +2,25 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Mon site GitHub Pages</title>
+  <title>Jeu d'échecs</title>
+
+  <!-- Chessboard CSS -->
+  <link rel="stylesheet"
+    href="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <h1>Bonjour 👋</h1>
-  <p>Mon site est en ligne !</p>
+  <h1>♟️ Jeu d’échecs</h1>
+
+  <div id="board" style="width: 400px"></div>
+  <p id="status"></p>
+
+  <!-- Librairies -->
+  <script src="https://unpkg.com/chess.js@1.0.0/chess.min.js"></script>
+  <script src="https://unpkg.com/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <script src="script.js"></script>
 </body>
 </html>
