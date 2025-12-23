@@ -1,3 +1,4 @@
+window.onload = function() {
 // Création de la partie
 const game = new Chess();
 let board = null;
@@ -55,3 +56,4 @@ const config = {
 
 board = Chessboard('board', config);
 updateStatus();
+};
