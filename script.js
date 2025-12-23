@@ -3,6 +3,38 @@ window.onload = function() {
 const game = new Chess();
 let board = null;
 
+let players = {
+  white: null,
+  black: null
+};
+document.getElementById('startGame').addEventListener('click', () => {
+  const whiteName = document.getElementById('playerWhite').value.trim();
+  const blackName = document.getElementById('playerBlack').value.trim();
+
+  if (!whiteName || !blackName) {
+    alert('Entre deux noms de joueurs');
+    return;
+  }
+
+  players.white = {
+    name: whiteName
+  };
+
+  players.black = {
+    name: blackName
+  };
+
+  startNewGame();
+});
+function startNewGame() {
+  game.reset();
+  board.position('start');
+
+  document.getElementById('players').style.display = 'none';
+
+  updateStatus();
+}
+
 function onDragStart(source, piece) {
   // Empêche de déplacer si la partie est finie
   if (game.isGameOver) return false;
@@ -34,18 +66,25 @@ function updateStatus() {
   let status = '';
 
   if (game.isCheckmate) {
-    status = 'Échec et mat !';
+    const winner = game.turn() === 'w'
+      ? players.black.name
+      : players.white.name;
+
+    status = `Échec et mat ! Victoire de ${winner}`;
   } else if (game.isDraw) {
     status = 'Partie nulle';
   } else {
-    status = `Au tour des ${game.turn() === 'w' ? 'Blancs' : 'Noirs'}`;
-    if (game.isCheck) {
-      status += ' — Échec !';
-    }
+    const currentPlayer =
+      game.turn() === 'w'
+        ? players.white.name
+        : players.black.name;
+
+    status = `Au tour de ${currentPlayer}`;
   }
 
   document.getElementById('status').textContent = status;
 }
+
 
 const config = {
   draggable: true,
