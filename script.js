@@ -164,7 +164,7 @@ function startNewGame() {
 }
 
 function onDragStart(source, piece) {
-  if (game.isGameOver()) return false;
+  if (game.isGameOver) return false;
 
   // Empêche de jouer les pièces adverses
   if (
@@ -211,14 +211,14 @@ function updateStatus() {
 
   let status = '';
 
-  if (game.isCheckmate()) {
+  if (game.isCheckmate) {
     const winner =
       game.turn() === 'w'
         ? players.black.name
         : players.white.name;
 
     status = `Échec et mat ! Victoire de ${winner}`;
-  } else if (game.isDraw()) {
+  } else if (game.isDraw) {
     status = 'Partie nulle';
   } else {
     const currentPlayer =
