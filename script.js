@@ -2,35 +2,64 @@ window.onload = function() {
 // Création de la partie
 const game = new Chess();
 let board = null;
-
+let waitingQueue = [];
 let players = {
   white: null,
   black: null
 };
-document.getElementById('startGame').addEventListener('click', () => {
-  const whiteName = document.getElementById('playerWhite').value.trim();
-  const blackName = document.getElementById('playerBlack').value.trim();
 
-  if (!whiteName || !blackName) {
-    alert('Entre deux noms de joueurs');
+document.getElementById('joinQueue').addEventListener('click', () => {
+  const name = document.getElementById('playerName').value.trim();
+
+  if (!name) {
+    alert('Entre un pseudo');
     return;
   }
 
-  players.white = {
-    name: whiteName
-  };
+  // Empêche doublons
+  if (waitingQueue.includes(name)) {
+    alert('Tu es déjà dans la file');
+    return;
+  }
 
-  players.black = {
-    name: blackName
-  };
+  waitingQueue.push(name);
+  updateQueueStatus();
 
-  startNewGame();
+  tryPairing();
 });
+function tryPairing() {
+  if (waitingQueue.length >= 2) {
+    const p1 = waitingQueue.shift();
+    const p2 = waitingQueue.shift();
+
+    // Attribution aléatoire des couleurs
+    if (Math.random() < 0.5) {
+      players.white = { name: p1 };
+      players.black = { name: p2 };
+    } else {
+      players.white = { name: p2 };
+      players.black = { name: p1 };
+    }
+
+    startNewGame();
+  }
+}
+function updateQueueStatus() {
+  const status = document.getElementById('queueStatus');
+
+  if (waitingQueue.length === 0) {
+    status.textContent = 'Aucun joueur en attente';
+  } else {
+    status.textContent =
+      `En attente : ${waitingQueue.join(', ')}`;
+  }
+}
+
 function startNewGame() {
   game.reset();
   board.position('start');
 
-  document.getElementById('players').style.display = 'none';
+  document.getElementById('lobby').style.display = 'none';
 
   updateStatus();
 }
