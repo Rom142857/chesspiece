@@ -5,7 +5,7 @@ let board = null;
 
 function onDragStart(source, piece) {
   // Empêche de déplacer si la partie est finie
-  if (game.isGameOver()) return false;
+  if (game.isGameOver) return false;
 
   // Empêche de jouer les pièces adverses
   if (
@@ -35,11 +35,11 @@ function updateStatus() {
 
   if (game.isCheckmate) {
     status = 'Échec et mat !';
-  } else if (game.isDraw()) {
+  } else if (game.isDraw) {
     status = 'Partie nulle';
   } else {
     status = `Au tour des ${game.turn() === 'w' ? 'Blancs' : 'Noirs'}`;
-    if (game.isCheck()) {
+    if (game.isCheck) {
       status += ' — Échec !';
     }
   }
