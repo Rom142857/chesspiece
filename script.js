@@ -12,7 +12,7 @@ let myColor = null;
 let currentGameId = null;
 let syncing = false;
 let gameReady = false;
-
+const myUid = crypto.randomUUID();
 const firebaseConfig = {
     apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
     authDomain: "chesspiece-fc91e.firebaseapp.com",
@@ -49,15 +49,16 @@ db.ref('games').on('child_added', snapshot => {
 });
 
 function joinQueue(name) {
-  myQueueRef = db.ref('queue').push();
-  myQueueRef.set({
-    name: name,
+  myName = name;
+
+  const ref = db.ref(`queue/${myUid}`);
+  ref.set({
+    name: myName,
     joinedAt: Date.now()
   });
 
   attemptMatchmaking();
 }
-
 document.getElementById('joinQueue').addEventListener('click', () => {
   const name = document.getElementById('playerName').value.trim();
 
@@ -85,30 +86,36 @@ function attemptMatchmaking() {
     if (!queue) return queue;
 
     const ids = Object.keys(queue);
-    if (ids.length < 2) return queue;
 
-    // On prend les 2 premiers
-    const id1 = ids[0];
-    const id2 = ids[1];
+    // On enlève notre propre uid des candidats
+    const otherIds = ids.filter(id => id !== myUid);
 
-    const p1 = queue[id1].name;
-    const p2 = queue[id2].name;
+    if (otherIds.length < 1) return queue;
+
+    const opponentId = otherIds[0];
+    const opponent = queue[opponentId];
+    const me = queue[myUid];
+
+    if (!me || !opponent) return queue;
 
     const gameId = db.ref('games').push().key;
 
+    const whiteIsMe = Math.random() < 0.5;
+
     db.ref(`games/${gameId}`).set({
-      white: Math.random() < 0.5 ? p1 : p2,
-      black: Math.random() < 0.5 ? p2 : p1,
+      white: whiteIsMe ? me.name : opponent.name,
+      black: whiteIsMe ? opponent.name : me.name,
       fen: 'start'
     });
 
-    // Supprime les joueurs de la file
-    delete queue[id1];
-    delete queue[id2];
+    // On retire LES DEUX joueurs
+    delete queue[myUid];
+    delete queue[opponentId];
 
     return queue;
   });
 }
+
 
   
 function listenToGameUpdates() {
