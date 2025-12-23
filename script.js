@@ -32,6 +32,16 @@ db.ref(`games/${currentGameId}`).on('value', snapshot => {
 
   updateStatus();
 });
+// Pour mettre à jour immédiatement après chaque capture
+db.ref(`players/${players.white.name}/pieces`).on('value', snapshot => {
+  const pieces = snapshot.val();
+  if (pieces) displayPieceElo('white', pieces);
+});
+
+db.ref(`players/${players.black.name}/pieces`).on('value', snapshot => {
+  const pieces = snapshot.val();
+  if (pieces) displayPieceElo('black', pieces);
+});
 
 
 function joinQueue(name) {
@@ -319,6 +329,16 @@ function handleCapture(capturingPlayer, capturedPlayer, capturedPiece) {
   }).catch(err => {
     console.error("Erreur mise à jour Elo capture :", err);
   });
+}
+
+function displayPieceElo(playerColor, pieces) {
+  for (const piece in pieces) {
+    const id = `${playerColor}-${piece}`;
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = Math.round(pieces[piece]);
+    }
+  }
 }
 
 const config = {
