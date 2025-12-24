@@ -135,6 +135,8 @@ function joinQueue() {
       players.white = { name: myName };
       players.black = { name: opponentName };
       myColor = 'w';
+      gameReady = true;
+
 
       // Démarre l'écoute Firebase pour cette partie
       listenToGame(currentGameId);
