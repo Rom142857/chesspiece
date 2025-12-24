@@ -8,19 +8,6 @@ let currentGameRef = null;
 let gameReady = false;
 let myName = prompt("Entrez votre pseudo :");
 
-const firebaseConfig = {
-    apiKey: "AIzaSyDKFmG_xjBxU1XkpOvFlfF1UymqpqpBS6g",
-    authDomain: "chesspiece-fc91e.firebaseapp.com",
-    databaseURL: "https://chesspiece-fc91e-default-rtdb.firebaseio.com",
-    projectId: "chesspiece-fc91e",
-    storageBucket: "chesspiece-fc91e.firebasestorage.app",
-    messagingSenderId: "150549414858",
-    appId: "1:150549414858:web:0e200e0d48d5c9c0f3c533"
-  };
-
- // Initialize Firebase
-const db = initializeApp(firebaseConfig);
-
 // ==================== INITIALISATION ÉCHIQUIER ====================
 board = Chessboard('board', {
   draggable: true,
