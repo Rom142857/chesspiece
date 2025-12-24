@@ -144,3 +144,4 @@ function joinQueue() {
     }
   });
 }
+updateStatus();
