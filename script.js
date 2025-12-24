@@ -4,6 +4,7 @@ let board;
 let players = { white: null, black: null };
 let myColor;
 let currentGameId;
+let currentGameRef = null;
 let gameReady = false;
 let myName = prompt("Entrez votre pseudo :");
 
@@ -36,7 +37,63 @@ function updateStatus() {
   board.position(game.fen());
 }
 
+// ==================== CALLBACK FIREBASE : ÉCOUTE DE LA PARTIE ====================
+function listenToGame(gameId) {
+  // Detach previous listener si existant
+  if (currentGameRef) {
+    try {
+      currentGameRef.off();
+    } catch (e) {
+      console.warn("Erreur lors de la suppression de l'ancien listener :", e);
+    }
+    currentGameRef = null;
+  }
 
+  if (!gameId) return;
+
+  currentGameRef = db.ref(`games/${gameId}`);
+  currentGameRef.on('value', snapshot => {
+    const data = snapshot.val();
+
+    // Si la partie a été supprimée côté serveur
+    if (!data) {
+      console.log(`La partie ${gameId} a été supprimée côté serveur.`);
+      gameReady = false;
+      currentGameId = null;
+
+      // Remise à zéro locale
+      try {
+        game.reset();
+      } catch (e) { /* ignore */ }
+
+      board.position('start');
+      return;
+    }
+
+    // Mise à jour des joueurs et du tour (facultatif)
+    if (data.white) players.white = { name: data.white };
+    if (data.black) players.black = { name: data.black };
+
+    // Mise à jour de la position via la FEN si différente
+    if (typeof data.fen === 'string') {
+      const remoteFen = data.fen === 'start' ? new Chess().fen() : data.fen; // normalize 'start'
+      if (remoteFen !== game.fen()) {
+        // Tenter de charger la FEN distante
+        const loaded = game.load(remoteFen);
+        if (!loaded) {
+          console.warn("Impossible de charger la FEN distante :", remoteFen, "- remise à l'état par défaut.");
+          game.reset();
+          // si remoteFen n'est pas valide, on garde la position par défaut
+        }
+        board.position(game.fen());
+        updateStatus();
+      }
+    }
+
+    // Activation du jeu si nécessaire
+    gameReady = true;
+  });
+}
 
 // ==================== GESTION FILE D'ATTENTE ====================
 function clearCurrentGame(playerName) {
@@ -78,6 +135,9 @@ function joinQueue() {
       players.white = { name: myName };
       players.black = { name: opponentName };
       myColor = 'w';
+
+      // Démarre l'écoute Firebase pour cette partie
+      listenToGame(currentGameId);
 
       gameReady = true;
       console.log(`Partie commencée contre ${opponentName}`);
